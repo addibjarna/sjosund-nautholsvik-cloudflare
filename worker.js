@@ -1,4 +1,3 @@
-
 const TIDE_URL = "https://www.tide-forecast.com/locations/Reykjavik-Iceland/tides/latest";
 const NAUTHOLSVIK_URL = "https://nautholsvik.is/";
 
@@ -18,24 +17,30 @@ body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0%,rgba(
 </style></head><body><main class="app"><div class="title">Sjósund<br>Nauthólsvík</div><div class="sub">Flóð • fjara • sjávarhiti</div>
 <section class="card"><div class="toprow"><div><div class="label">Flóðastaða núna</div><div class="big" id="h">—</div><div class="state" id="st">Sæki flóðagögn</div></div><div class="next"><div class="label">Næsta flóð/fjara</div><div class="medium" id="nt">—</div><div class="small" id="nh">—</div></div></div>
 <div class="pill" id="td">Flóðagögn Reykjavík: —</div><div class="chart"><svg id="chart" viewBox="0 0 390 205"></svg></div>
-<div class="pill" id="obs">Síðasta athugun Nauthólsvíkur: —</div><div class="grid"><div class="m"><div class="label">Sjávarhiti</div><div class="val" id="sea">—</div><div class="small">Nauthólsvík</div></div><div class="m"><div class="label">Lofthiti</div><div class="val" id="air">—</div><div class="small">Nauthólsvík</div></div><div class="m"><div class="label">Vindur</div><div class="val" id="wind">—</div><div class="small">síðasta athugun</div></div></div></section></main>
+<div class="pill" id="obs">Síðasta athugun Nauthólsvíkur: —</div><div class="grid"><div class="m"><div class="label">Sjávarhiti</div><div class="val" id="seaTempBox">—</div><div class="small">Nauthólsvík</div></div><div class="m"><div class="label">Lofthiti</div><div class="val" id="air">—</div><div class="small">Nauthólsvík</div></div><div class="m"><div class="label">Vindur</div><div class="val" id="wind">—</div><div class="small">síðasta athugun</div></div></div></section></main>
 <script>
-const $=id=>document.getElementById(id);function min(t){let[a,b]=t.split(":").map(Number);return a*60+b}function em(e){return typeof e.minute=="number"?e.minute:min(e.time)}function fm(v){return v==null?"—":Number(v).toFixed(2).replace(".",",")+" m"}function et(t){return t=="high"?"Flóð":"Fjara"}function nowm(){let d=new Date;return d.getHours()*60+d.getMinutes()}function dmin(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
+const $=id=>document.getElementById(id);
+function min(t){let[a,b]=t.split(":").map(Number);return a*60+b}
+function em(e){return typeof e.minute=="number"?e.minute:min(e.time)}
+function fm(v){return v==null?"—":Number(v).toFixed(2).replace(".",",")+" m"}
+function et(t){return t=="high"?"Flóð":"Fjara"}
+function nowm(){let d=new Date;return d.getHours()*60+d.getMinutes()}
+function dmin(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
 function iceDate(s){let m=String(s||"").match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);if(!m)return s||"—";let y=+m[1],mo=+m[2],da=+m[3],d=new Date(Date.UTC(y,mo-1,da));let w=["sunnudagur","mánudagur","þriðjudagur","miðvikudagur","fimmtudagur","föstudagur","laugardagur"],ms=["janúar","febrúar","mars","apríl","maí","júní","júlí","ágúst","september","október","nóvember","desember"];return w[d.getUTCDay()]+" "+da+". "+ms[mo-1]+" "+y}
 function est(ev,m){ev=[...ev].sort((a,b)=>em(a)-em(b));let p,n;for(let i=0;i<ev.length-1;i++){if(m>=em(ev[i])&&m<=em(ev[i+1])){p=ev[i];n=ev[i+1];break}}if(!p||!n)return null;let r=Math.max(0,Math.min(1,(m-em(p))/(em(n)-em(p)))),s=(1-Math.cos(r*Math.PI))/2;return {height:+(p.height+(n.height-p.height)*s).toFixed(2),prev:p,next:n}}
-function draw(events,calc){let svg=$("chart"),today=calc.filter(e=>em(e)<=1440),ee=est(calc,1440);if(ee)today.push({time:"24:00",minute:1440,height:ee.height,type:"x"});let cur=est(calc,nowm());let mn=Math.floor((Math.min(...today.map(e=>e.height),cur?cur.height:99)-.1)/.2)*.2,mx=Math.ceil((Math.max(...today.map(e=>e.height),cur?cur.height:-99)+.1)/.2)*.2;let W=390,H=205,L=42,R=12,T=16,B=38,pw=W-L-R,ph=H-T-B,x=m=>L+Math.max(0,Math.min(1440,m))/1440*pw,y=h=>T+(mx-h)/Math.max(.2,mx-mn)*ph;let pts=today.map(e=>[x(em(e)),y(e.height)]),path="M"+pts[0][0]+","+pts[0][1];for(let i=0;i<pts.length-1;i++){let[x1,y1]=pts[i],[x2,y2]=pts[i+1],mid=(x1+x2)/2;path+=" C"+mid+","+y1+" "+mid+","+y2+" "+x2+","+y2}let grid="";for(let v=mn;v<=mx+.001;v+=.2){v=+v.toFixed(1);grid+='<line x1="'+L+'" x2="'+(L+pw)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="rgba(255,255,255,.11)"/><text x="4" y="'+(y(v)+4)+'" fill="#d8eef6" font-size="10">'+String(v.toFixed(1)).replace(".",",")+' m</text>'}for(let m=0;m<=1440;m+=180){let lab=m==1440?"24":String(Math.floor(m/60)).padStart(2,"0");grid+='<line x1="'+x(m)+'" x2="'+x(m)+'" y1="'+T+'" y2="'+(T+ph)+'" stroke="rgba(255,255,255,.08)"/><text x="'+(x(m)-7)+'" y="'+(H-8)+'" fill="#d8eef6" font-size="11">'+lab+'</text>'}let dots=events.map(e=>{let px=x(em(e)),py=y(e.height),c=e.type=="high"?"#ffd45e":"#74f0ff",ty=e.type=="high"?py-12:py+22,lx=Math.max(40,Math.min(px-24,325));return '<circle cx="'+px+'" cy="'+py+'" r="5.5" fill="'+c+'" stroke="white" stroke-width="1.5"/><text x="'+lx+'" y="'+ty+'" fill="#f7fcff" font-size="10" font-weight="700">'+e.time+'</text><text x="'+lx+'" y="'+(ty+12)+'" fill="#b5ccd7" font-size="10">'+String(e.height).replace(".",",")+' m</text>'}).join("");let now="";if(cur){let px=x(nowm()),py=y(cur.height);now='<line x1="'+px+'" x2="'+px+'" y1="'+T+'" y2="'+(T+ph)+'" stroke="#ff6fb1" stroke-width="2" stroke-dasharray="5 5"/><circle cx="'+px+'" cy="'+py+'" r="8" fill="#ff6fb1" stroke="white" stroke-width="2.5"/>'}svg.innerHTML='<defs><linearGradient id="sea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#74f0ff" stop-opacity=".62"/><stop offset="1" stop-color="#74f0ff" stop-opacity=".04"/></linearGradient></defs><rect x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" rx="16" fill="rgba(255,255,255,.035)"/>'+grid+'<path d="'+path+' L'+(L+pw)+','+(T+ph)+' L'+L+','+(T+ph)+'Z" fill="url(#sea)"/><path d="'+path+'" fill="none" stroke="#74f0ff" stroke-width="4" stroke-linecap="round"/>'+dots+now}
+function draw(events,calc){let svg=$("chart"),today=calc.filter(e=>em(e)<=1440),ee=est(calc,1440);if(ee)today.push({time:"24:00",minute:1440,height:ee.height,type:"x"});let cur=est(calc,nowm());let mn=Math.floor((Math.min(...today.map(e=>e.height),cur?cur.height:99)-.1)/.2)*.2,mx=Math.ceil((Math.max(...today.map(e=>e.height),cur?cur.height:-99)+.1)/.2)*.2;let W=390,H=205,L=42,R=12,T=16,B=38,pw=W-L-R,ph=H-T-B,x=m=>L+Math.max(0,Math.min(1440,m))/1440*pw,y=h=>T+(mx-h)/Math.max(.2,mx-mn)*ph;let pts=today.map(e=>[x(em(e)),y(e.height)]),path="M"+pts[0][0]+","+pts[0][1];for(let i=0;i<pts.length-1;i++){let[x1,y1]=pts[i],[x2,y2]=pts[i+1],mid=(x1+x2)/2;path+=" C"+mid+","+y1+" "+mid+","+y2+" "+x2+","+y2}let grid="";for(let v=mn;v<=mx+.001;v+=.2){v=+v.toFixed(1);grid+='<line x1="'+L+'" x2="'+(L+pw)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="rgba(255,255,255,.11)"/><text x="4" y="'+(y(v)+4)+'" fill="#d8eef6" font-size="10">'+String(v.toFixed(1)).replace(".",",")+' m</text>'}for(let m=0;m<=1440;m+=180){let lab=m==1440?"24":String(Math.floor(m/60)).padStart(2,"0");grid+='<line x1="'+x(m)+'" x2="'+x(m)+'" y1="'+T+'" y2="'+(T+ph)+'" stroke="rgba(255,255,255,.08)"/><text x="'+(x(m)-7)+'" y="'+(H-8)+'" fill="#d8eef6" font-size="11">'+lab+'</text>'}let dots=events.map(e=>{let px=x(em(e)),py=y(e.height),c=e.type=="high"?"#ffd45e":"#74f0ff",ty=e.type=="high"?py-12:py+22,lx=Math.max(40,Math.min(px-24,325));return '<circle cx="'+px+'" cy="'+py+'" r="5.5" fill="'+c+'" stroke="white" stroke-width="1.5"/><text x="'+lx+'" y="'+ty+'" fill="#f7fcff" font-size="10" font-weight="700">'+e.time+'</text><text x="'+lx+'" y="'+(ty+12)+'" fill="#b5ccd7" font-size="10">'+String(e.height).replace(".",",")+' m</text>'}).join("");let now="";if(cur){let px=x(nowm()),py=y(cur.height);now='<line x1="'+px+'" x2="'+px+'" y1="'+T+'" y2="'+(T+ph)+'" stroke="#ff6fb1" stroke-width="2" stroke-dasharray="5 5"/><circle cx="'+px+'" cy="'+py+'" r="8" fill="#ff6fb1" stroke="white" stroke-width="2.5"/>'}svg.innerHTML='<defs><linearGradient id="seaGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#74f0ff" stop-opacity=".62"/><stop offset="1" stop-color="#74f0ff" stop-opacity=".04"/></linearGradient></defs><rect x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" rx="16" fill="rgba(255,255,255,.035)"/>'+grid+'<path d="'+path+' L'+(L+pw)+','+(T+ph)+' L'+L+','+(T+ph)+'Z" fill="url(#seaGradient)"/><path d="'+path+'" fill="none" stroke="#74f0ff" stroke-width="4" stroke-linecap="round"/>'+dots+now}
 function renderTides(d){let ev=d.events,calc=d.calcEvents||ev,cur=est(calc,nowm()),next=[...calc].sort((a,b)=>em(a)-em(b)).find(e=>em(e)>=nowm());$("h").textContent=cur?fm(cur.height):"—";$("st").textContent=next?(next.type=="high"?"Hækkandi sjór":"Lækkandi sjór"):"—";$("nt").textContent=next?dmin(em(next)):"—";$("nh").textContent=next?et(next.type)+" • "+fm(next.height):"—";let n=new Date,tl=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");$("td").innerHTML="<span>Flóðagögn Reykjavík: "+iceDate(d.date)+"</span><span class='subline'>Núna "+tl+" • "+(cur?fm(cur.height):"—")+"</span>";draw(ev,calc)}
 function noTides(){$("st").textContent="Vantar flóðagögn";$("chart").innerHTML='<foreignObject x="0" y="0" width="390" height="205"><div xmlns="http://www.w3.org/1999/xhtml" class="err">Náði ekki að sækja flóðagögn.</div></foreignObject>'}
 function renderObs(d){
   const sea = d?.seaTemp ?? d?.sea_temperature ?? d?.sea ?? d?.sjavarhiti ?? d?.["Sjávarhiti"];
   const air = d?.airTemp ?? d?.air_temperature ?? d?.air ?? d?.lofthiti ?? d?.["Lofthiti"];
   const wind = d?.wind ?? d?.windSpeed ?? d?.vindur ?? d?.["Vindhraði"];
-  $("sea").textContent = sea !== undefined && sea !== null && sea !== "" ? String(sea).replace(".",",")+"°" : "—";
+  $("seaTempBox").textContent = sea !== undefined && sea !== null && sea !== "" ? String(sea).replace(".",",")+"°" : "—";
   $("air").textContent = air !== undefined && air !== null && air !== "" ? String(air).replace(".",",")+"°" : "—";
   $("wind").textContent = wind !== undefined && wind !== null && wind !== "" ? String(wind).replace(".",",")+" m/s" : "—";
-  $("obs").textContent="Síðasta athugun Nauthólsvíkur: "+(d?.updated||"—")+" • v29";
+  $("obs").textContent="Síðasta athugun Nauthólsvíkur: "+(d?.updated||"—")+" • v30";
 }
-async function get(u){let r=await fetch(u+"?v=29&t="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error(r.status);return r.json()}
+async function get(u){let r=await fetch(u+"?v=30&t="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error(r.status);return r.json()}
 (async()=>{try{renderTides(await get("/api/tides"))}catch(e){noTides()}try{renderObs(await get("/api/nautholsvik"))}catch(e){renderObs(null)}})();
 </script></body></html>`;
 
@@ -59,8 +64,6 @@ async function getTides(){
   return {station:"Reykjavík",source:"Tide-Forecast",date,events:rows,calcEvents:calcEventsFor(rows)};
 }
 function valueBeforeLabel(text, label, unitPattern){
-  // Les síðasta talnagildið með réttri einingu fyrir framan heitið.
-  // Dæmi: "12.5°C Sjávarhiti" eða með línuskiptum á milli.
   const idx = text.toLowerCase().indexOf(label.toLowerCase());
   if (idx < 0) return null;
   const before = text.slice(Math.max(0, idx - 80), idx);
@@ -80,11 +83,9 @@ async function getObs(){
   let r=await fetch(NAUTHOLSVIK_URL,{headers:{"user-agent":"Mozilla/5.0 SjosundWorker"},cf:{cacheTtl:0,cacheEverything:false}});
   if(!r.ok)throw Error("Nauthólsvík svaraði "+r.status);
   let text=stripHtml(await r.text()), updated=((text.match(/Síðasta athugun:\s*([0-9./: ]+)/i)||[])[1]||"").trim()||null;
-
   const airTemp = valueBeforeLabel(text,"Lofthiti","°?C") || valueAfterLabel(text,"Lofthiti","°?C");
   const seaTemp = valueBeforeLabel(text,"Sjávarhiti","°?C") || valueAfterLabel(text,"Sjávarhiti","°?C");
   const wind = valueBeforeLabel(text,"Vindhraði","m\\/s") || valueAfterLabel(text,"Vindhraði","m\\/s");
-
   return {seaTemp,airTemp,wind,updated,source:"Nauthólsvík"};
 }
 export default {async fetch(request){let url=new URL(request.url);try{if(url.pathname==="/"||url.pathname==="/index.html")return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});if(url.pathname==="/api/tides")return json(await getTides());if(url.pathname==="/api/nautholsvik")return json(await getObs());if(url.pathname==="/health")return json({ok:true});return json({error:"Not found"},404)}catch(e){return json({error:e.message},502)}}};
