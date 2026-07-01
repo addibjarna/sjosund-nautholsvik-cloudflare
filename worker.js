@@ -50,11 +50,33 @@ async function getTides(){
   if(rows.length<4)throw Error("Fann ekki 4 flóðaviðburði");
   return {station:"Reykjavík",source:"Tide-Forecast",date,events:rows,calcEvents:calcEventsFor(rows)};
 }
-function pick(text,label,unit){let re=new RegExp("([0-9]+(?:[.,][0-9]+)?)\\s*"+unit+"\\s*"+label,"i");return (text.match(re)||[])[1]||null}
+function valueBeforeLabel(text, label, unitPattern){
+  // Les síðasta talnagildið með réttri einingu fyrir framan heitið.
+  // Dæmi: "12.5°C Sjávarhiti" eða með línuskiptum á milli.
+  const idx = text.toLowerCase().indexOf(label.toLowerCase());
+  if (idx < 0) return null;
+  const before = text.slice(Math.max(0, idx - 80), idx);
+  const re = new RegExp("([0-9]+(?:[.,][0-9]+)?)\\s*" + unitPattern, "gi");
+  let match, last = null;
+  while ((match = re.exec(before)) !== null) last = match[1];
+  return last;
+}
+function valueAfterLabel(text, label, unitPattern){
+  const idx = text.toLowerCase().indexOf(label.toLowerCase());
+  if (idx < 0) return null;
+  const after = text.slice(idx, idx + 80);
+  const re = new RegExp(label + "\\s*([0-9]+(?:[.,][0-9]+)?)\\s*" + unitPattern, "i");
+  return (after.match(re) || [])[1] || null;
+}
 async function getObs(){
   let r=await fetch(NAUTHOLSVIK_URL,{headers:{"user-agent":"Mozilla/5.0 SjosundWorker"},cf:{cacheTtl:0,cacheEverything:false}});
   if(!r.ok)throw Error("Nauthólsvík svaraði "+r.status);
   let text=stripHtml(await r.text()), updated=((text.match(/Síðasta athugun:\s*([0-9./: ]+)/i)||[])[1]||"").trim()||null;
-  return {seaTemp:pick(text,"Sjávarhiti","°?C"),airTemp:pick(text,"Lofthiti","°?C"),wind:pick(text,"Vindhraði","m\\/s"),updated,source:"Nauthólsvík"};
+
+  const airTemp = valueBeforeLabel(text,"Lofthiti","°?C") || valueAfterLabel(text,"Lofthiti","°?C");
+  const seaTemp = valueBeforeLabel(text,"Sjávarhiti","°?C") || valueAfterLabel(text,"Sjávarhiti","°?C");
+  const wind = valueBeforeLabel(text,"Vindhraði","m\\/s") || valueAfterLabel(text,"Vindhraði","m\\/s");
+
+  return {seaTemp,airTemp,wind,updated,source:"Nauthólsvík"};
 }
 export default {async fetch(request){let url=new URL(request.url);try{if(url.pathname==="/"||url.pathname==="/index.html")return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});if(url.pathname==="/api/tides")return json(await getTides());if(url.pathname==="/api/nautholsvik")return json(await getObs());if(url.pathname==="/health")return json({ok:true});return json({error:"Not found"},404)}catch(e){return json({error:e.message},502)}}};
