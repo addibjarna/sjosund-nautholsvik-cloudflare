@@ -164,7 +164,7 @@ async function getObs(){
   let weatherUpdated=null;
   if(typeof w.observed==="string"&&Number.isFinite(Date.parse(w.observed))){
     const d=new Date(w.observed);
-    const date=new Intl.DateTimeFormat("is-IS",{day:"numeric",month:"short",timeZone:"Atlantic/Reykjavik"}).format(d);
+    const date=new Intl.DateTimeFormat("is-IS",{day:"numeric",month:"long",timeZone:"Atlantic/Reykjavik"}).format(d);
     const time=new Intl.DateTimeFormat("is-IS",{hour:"2-digit",minute:"2-digit",hourCycle:"h23",timeZone:"Atlantic/Reykjavik"}).format(d);
     weatherUpdated=date+" kl. "+time;
   }
